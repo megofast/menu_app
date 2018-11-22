@@ -1,0 +1,50 @@
+body {
+  font-family: sans-serif;
+  background-color: #222222;
+}
+
+h1, h2, h3, h4, h5, h6, p {
+  color: #ffffff;
+}
+
+a {
+  text-decoration: none;
+  font-size: 0.75em;
+}
+
+.header {
+    text-align: center;
+    border-bottom: 2px solid;
+    border-color: #999999;
+}
+
+.panel {
+  position: absolute;
+  border: 2px solid;
+  border-radius: 25px;
+  padding: 25px;
+  margin: 50px;
+  border-color: #999999;
+}
+
+.title {
+  color: #ffffff;
+  display: inline-block;
+  width: 50%;
+  float: left;
+}
+
+.desc {
+  color: #777777;
+}
+
+.modify {
+    display: inline-block;
+}
+
+.price {
+  color: #666666;
+  width: 50%;
+  text-align: right;
+  float: right;
+}
