@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Restaurant, MenuItem
+from database_setup import Base, Restaurant, MenuItem, User
 
 from flask import session as login_session
 import random, string
@@ -18,7 +18,7 @@ import requests
 CLIENT_ID = json.loads(open('client_secrets.json', 'r').read())['web']['client_id']
 
 #Connect to Database and create database session
-engine = create_engine('sqlite:///restaurantmenu.db')
+engine = create_engine('sqlite:///restaurantmenuwithusers.db')
 Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
@@ -52,7 +52,7 @@ def gconnect():
 
     # Check that the access token is valid.
     access_token = credentials.access_token
-    url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' % access_token)
+    url = ('https://www.googleapis.com/oauth2/v2/tokeninfo?access_token=%s' % access_token)
     h = httplib2.Http()
     result = json.loads(h.request(url, 'GET')[1])
 
@@ -90,15 +90,23 @@ def gconnect():
     login_session['gplus_id'] = gplus_id
 
     # Get user info
-    userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
+    userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+    #userinfo_url = "https://www.googleapis.com/plus/v1/people/me"
     params = {'access_token': credentials.access_token, 'alt': 'json'}
 
     answer = requests.get(userinfo_url, params=params)
-    data = answer.json()
 
+    data = answer.json()
+    print data
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     #login_session['email'] = data['email']
+
+    # Check if the user is in the database already
+    #user_id = getUserID(login_session['email'])
+    #if not user_id:
+    #    user_id = createUser(login_session)
+    #login_session['user_id'] = user_id
 
     output = ''
     output += '<h1>Welcome, '
@@ -124,8 +132,7 @@ def gdisconnect():
     url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
-    print access_token
-    print result
+
     if result['status'] == '200':
         # Reset all the users session variables
         del login_session['access_token']
@@ -154,7 +161,8 @@ def restaurants():
 def newRestaurant():
     session = DBSession()
     if request.method == 'POST':
-        newItem = Restaurant(name = request.form['name'])
+        newItem = Restaurant(name = request.form['name'],
+                            user_id = login_session['user_id'])
         session.add(newItem)
         session.commit()
         flash('New Restaurant Created!')
@@ -213,7 +221,9 @@ def restaurantMenuJSON(restaurant_id):
 def newMenuItem(restaurant_id):
     session = DBSession()
     if request.method == 'POST':
-        newItem = MenuItem(name = request.form['name'], restaurant_id = restaurant_id)
+        newItem = MenuItem(name = request.form['name'],
+                            restaurant_id = restaurant_id,
+                            user_id = login_session['user_id'])
         session.add(newItem)
         session.commit()
         flash('New Menu Item Created!')
@@ -250,6 +260,29 @@ def deleteMenuItem(restaurant_id, menu_id):
         return redirect(url_for('restaurantMenu', restaurant_id = restaurant_id))
     else:
         return render_template('deleteMenuItem.html', item = deleteItem)
+
+def createUser(login_session):
+    session = DBSession()
+    newUser = User(name = login_session['username'],
+            email = login_session['email'],
+            picture = login_session['picture'])
+    session.add(newUser)
+    session.commit()
+    user = session.query(User).filter_by(email = login_session['email']).one()
+    return user.id
+
+def getUserInfo(user_id):
+    session = DBSession()
+    user = session.query(User).filter_by(id = user_id).one()
+    return user
+
+def getUserID(email):
+    session = DBSession()
+    try:
+        user = session.query(User).filter_by(email = email).one()
+        return user.id
+    except:
+        return None
 
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'

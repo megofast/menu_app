@@ -27,6 +27,13 @@ a {
   border-color: #999999;
 }
 
+.restaurant {
+  position: relative;
+  border: 1px solid;
+  border-radius: 10px;
+  border-color: #999999;
+}
+
 .title {
   color: #ffffff;
   display: inline-block;
